@@ -21,7 +21,7 @@ public class SecurityConfig {
                         // Libera Swagger e OpenAPI
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // Libera endpoints da API (Temporário para testes manuais, depois fecharemos com JWT)
-                        .requestMatchers("/v1/artists/**").permitAll()
+                        .requestMatchers("/v1/artists/**", "/v1/albums/**").permitAll()
                         // Bloqueia qualquer outra coisa
                         .anyRequest().authenticated()
                 );
