@@ -68,4 +68,13 @@ public class ArtistPersistenceAdapter implements ArtistRepositoryPort {
                 pageEntity.getTotalPages()
         );
     }
+
+    @Override
+    public List<Artist> findAllByIds(List<Long> ids) {
+        // 1. repository.findAllById(ids): O Spring Data busca todos os IDs no banco de uma vez (WHERE id IN (...))
+        // 2. stream().map(...): Converte de ArtistEntity (Banco) para Artist (Domínio)
+        return repository.findAllById(ids).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
 }
