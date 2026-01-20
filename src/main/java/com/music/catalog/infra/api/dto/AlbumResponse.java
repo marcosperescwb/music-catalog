@@ -6,5 +6,6 @@ public record AlbumResponse(
         Long id,
         String title,
         Integer releaseYear,
-        List<ArtistResponse> artists
+        List<ArtistResponse> artists,
+        List<String> coverImageUrls
 ) {}
