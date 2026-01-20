@@ -46,3 +46,5 @@ app:
     secret-key: minioadmin
     bucket-name: music-covers
     region: us-east-1
+  integrations:
+    regionals-url: https://integrador-argus-api.geia.vip/v1/regionais    
