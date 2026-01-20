@@ -12,6 +12,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
+import com.music.catalog.infra.persistence.repository.AlbumImageRepository;
+import com.music.catalog.infra.persistence.entity.AlbumImageEntity;
 
 import java.util.List;
 
@@ -20,6 +22,7 @@ import java.util.List;
 public class AlbumPersistenceAdapter implements AlbumRepositoryPort {
 
     private final AlbumRepository repository;
+    private final AlbumImageRepository imageRepository;
     private final AlbumMapper mapper;
 
     @Override
@@ -55,5 +58,24 @@ public class AlbumPersistenceAdapter implements AlbumRepositoryPort {
         return repository.findAll().stream()
                 .anyMatch(a -> a.getTitle().equalsIgnoreCase(title) &&
                         a.getArtists().stream().anyMatch(art -> art.getId().equals(artistId)));
+    }
+
+    @Override
+    public void saveImage(Long albumId, String fileName, String contentType) {
+        AlbumEntity album = repository.getReferenceById(albumId); // GetReference é mais leve, não faz SELECT
+
+        AlbumImageEntity image = new AlbumImageEntity();
+        image.setAlbum(album);
+        image.setFileName(fileName);
+        image.setContentType(contentType);
+
+        imageRepository.save(image);
+    }
+
+    @Override
+    public List<String> findImagesByAlbumId(Long albumId) {
+        return imageRepository.findByAlbumId(albumId).stream()
+                .map(AlbumImageEntity::getFileName)
+                .toList();
     }
 }

@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/v1/albums")
@@ -41,5 +43,22 @@ public class AlbumController {
     ) {
         PageDomain<Album> pageResult = albumUseCase.list(page, size);
         return ResponseEntity.ok(mapper.toPageResponse(pageResult));
+    }
+
+    @PostMapping(value = "/{id}/cover", consumes = "multipart/form-data")
+    @Operation(summary = "Upload album cover image")
+    public ResponseEntity<Void> uploadCover(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+
+        albumUseCase.uploadCover(
+                id,
+                file.getOriginalFilename(),
+                file.getInputStream(),
+                file.getContentType()
+        );
+
+        return ResponseEntity.ok().build();
     }
 }

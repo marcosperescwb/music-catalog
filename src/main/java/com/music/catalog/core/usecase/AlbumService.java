@@ -7,11 +7,14 @@ import com.music.catalog.core.exception.BusinessException;
 import com.music.catalog.core.port.in.AlbumUseCase;
 import com.music.catalog.core.port.out.AlbumRepositoryPort;
 import com.music.catalog.core.port.out.ArtistRepositoryPort;
+import com.music.catalog.core.port.out.FileStoragePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +22,7 @@ public class AlbumService implements AlbumUseCase {
 
     private final AlbumRepositoryPort albumRepository;
     private final ArtistRepositoryPort artistRepository;
+    private final FileStoragePort fileStorage;
 
     @Override
     @Transactional
@@ -38,8 +42,36 @@ public class AlbumService implements AlbumUseCase {
     }
 
     @Override
+    @Transactional
+    public void uploadCover(Long albumId, String originalFilename, InputStream content, String contentType) {
+        // 1. Gera nome único (UUID + Extensão)
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        }
+        String storageFileName = UUID.randomUUID() + extension;
+
+        // 2. Salva no MinIO
+        fileStorage.save(storageFileName, content, contentType);
+
+        // 3. Salva referência no Banco
+        albumRepository.saveImage(albumId, storageFileName, contentType);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PageDomain<Album> list(int page, int size) {
-        return albumRepository.findAll(page, size);
+        PageDomain<Album> pageResult = albumRepository.findAll(page, size);
+
+        // Enriquecimento: Para cada álbum, busca as imagens e gera URLs assinadas
+        pageResult.getContent().forEach(album -> {
+            List<String> fileNames = albumRepository.findImagesByAlbumId(album.getId());
+            List<String> urls = fileNames.stream()
+                    .map(fileStorage::generatePresignedUrl)
+                    .toList();
+            album.setCoverImageUrls(urls);
+        });
+
+        return pageResult;
     }
 }
