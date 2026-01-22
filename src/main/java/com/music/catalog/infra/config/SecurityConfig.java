@@ -42,6 +42,7 @@ public class SecurityConfig {
                         // o ideal é proteger ou deixar público apenas o GET.
                         // Vamos deixar o GET público e o resto protegido para seguir o teste de Rate Limit.
                         .requestMatchers(HttpMethod.GET, "/v1/artists/**", "/v1/albums/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
 
                         // 4. Qualquer outra requisição exige autenticação
                         .anyRequest().authenticated()

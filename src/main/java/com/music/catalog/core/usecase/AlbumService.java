@@ -11,6 +11,8 @@ import com.music.catalog.core.port.out.FileStoragePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.music.catalog.infra.api.dto.AlbumNotificationDto;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.InputStream;
 import java.util.List;
@@ -23,22 +25,39 @@ public class AlbumService implements AlbumUseCase {
     private final AlbumRepositoryPort albumRepository;
     private final ArtistRepositoryPort artistRepository;
     private final FileStoragePort fileStorage;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
     public Album create(Album album, List<Long> artistIds) {
-        // 1. Validação: Busca os artistas pelos IDs informados
+        // 1. Validação
         List<Artist> artists = artistRepository.findAllByIds(artistIds);
-
-        // 2. Regra de Negócio: Todos os IDs informados devem existir
         if (artists.size() != artistIds.size()) {
             throw new BusinessException("One or more artists not found");
         }
 
-        // 3. Vinculação
+        // 2. Vinculação e Salvamento
         album.setArtists(artists);
+        Album savedAlbum = albumRepository.save(album);
 
-        return albumRepository.save(album);
+        // 3. Notificação WebSocket (Fire and Forget)
+        notifyFrontend(savedAlbum);
+
+        return savedAlbum;
+    }
+
+    private void notifyFrontend(Album album) {
+        try {
+            String message = "New album released: " + album.getTitle();
+            AlbumNotificationDto notification = new AlbumNotificationDto(album.getId(), album.getTitle(), message);
+
+            // Envia para quem estiver inscrito em /topic/albums
+            messagingTemplate.convertAndSend("/topic/albums", notification);
+        } catch (Exception e) {
+            // Logamos o erro mas não falhamos a transação principal
+            // (O álbum foi criado, se o socket falhar, paciência)
+            e.printStackTrace();
+        }
     }
 
     @Override
